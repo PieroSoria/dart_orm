@@ -95,7 +95,7 @@ class DartEngine {
 
         final decoded = jsonDecode(responseBody);
         return _unwrapTaggedValues(decoded);
-      } on SocketException catch (e) {
+      } on SocketException {
         if (attempt < 2) {
           await Future.delayed(Duration(milliseconds: 100 * (attempt + 1)));
           continue;

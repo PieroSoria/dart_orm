@@ -119,8 +119,6 @@ class DartCodegen {
   ) {
     final name = model['name'] as String;
     final fields = model['fields'] as List<dynamic>? ?? [];
-    final modelNames = allModels.map((m) => m['name'] as String).toSet();
-
     final buf = StringBuffer();
     final imports = <String>{"import 'prisma_client.dart';"};
 
