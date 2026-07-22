@@ -10,35 +10,18 @@ import 'package:path/path.dart';
 import 'src/generator.dart';
 import 'src/download_engine.dart';
 
-final _log = File('dart_orm_generator.log');
-
 void main() async {
-  await _log.writeAsString('=== Generator started at ${DateTime.now()} ===\n');
-
-  // Add a timeout to detect if Prisma doesn't send generate
-  final timer = Timer(const Duration(seconds: 30), () async {
-    await _log.writeAsString(
-      'TIMEOUT: No generate request received within 30s\n',
-      mode: FileMode.append,
-    );
-    exit(1);
-  });
+  final timer = Timer(const Duration(seconds: 30), () => exit(1));
 
   final lines = stdin.transform(utf8.decoder).transform(const LineSplitter());
 
   await for (final line in lines) {
-    await _log.writeAsString('RECV: $line\n', mode: FileMode.append);
-
     if (line.trim().isEmpty) continue;
 
     Map request;
     try {
       request = jsonDecode(line) as Map;
     } catch (e) {
-      await _log.writeAsString(
-        'Failed to parse JSON: $e\n',
-        mode: FileMode.append,
-      );
       continue;
     }
 
@@ -47,7 +30,6 @@ void main() async {
     final id = request['id'];
 
     if (method == 'getManifest') {
-      await _log.writeAsString('Handling getManifest\n', mode: FileMode.append);
       final manifest = GeneratorManifest(
         prettyName: 'Dart ORM',
         defaultOutput: 'generated_dart_client',
@@ -59,12 +41,10 @@ void main() async {
         'id': id,
       });
 
-      await _log.writeAsString('SEND: $response\n', mode: FileMode.append);
       stderr.writeln('\n$response');
       await stderr.flush();
     } else if (method == 'generate') {
       timer.cancel();
-      await _log.writeAsString('Handling generate\n', mode: FileMode.append);
       try {
         final options = GeneratorOptions.fromJson(params);
         await _generate(options);
@@ -75,19 +55,10 @@ void main() async {
           'id': id,
         });
 
-        await _log.writeAsString('SEND: $response\n', mode: FileMode.append);
         stderr.writeln('\n$response');
         await stderr.flush();
-        await _log.writeAsString(
-          'Generate done, closing\n',
-          mode: FileMode.append,
-        );
         break;
-      } catch (e, st) {
-        await _log.writeAsString(
-          'Generate ERROR: $e\n$st\n',
-          mode: FileMode.append,
-        );
+      } catch (e) {
         final response = jsonEncode({
           'jsonrpc': '2.0',
           'error': {'code': -32000, 'message': e.toString()},
@@ -96,16 +67,10 @@ void main() async {
         stderr.writeln('\n$response');
         await stderr.flush();
       }
-    } else {
-      await _log.writeAsString(
-        'Unknown method: $method\n',
-        mode: FileMode.append,
-      );
     }
   }
 
   timer.cancel();
-  await _log.writeAsString('Generator exiting\n', mode: FileMode.append);
 }
 
 Future<void> _generate(GeneratorOptions options) async {
