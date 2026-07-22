@@ -81,6 +81,5 @@ Future<void> downloadEngine(GeneratorOptions options) async {
 
 File _engineFile(String schemaPath) {
   final dir = path.dirname(schemaPath);
-  final name = Platform.isWindows ? 'prisma-query-engine.exe' : 'prisma-query-engine';
-  return File(path.join(dir, name));
+  return File(path.join(dir, 'prisma-query-engine'));
 }
