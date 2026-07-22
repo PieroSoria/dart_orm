@@ -1,10 +1,10 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:code_builder/code_builder.dart';
 import 'package:dart_style/dart_style.dart';
 import 'package:dart_orm/generator_helper.dart';
-import 'package:dart_orm/version.dart';
 import 'package:path/path.dart';
 
 import 'src/generator.dart';
@@ -14,6 +14,12 @@ final _log = File('dart_orm_generator.log');
 
 void main() async {
   await _log.writeAsString('=== Generator started at ${DateTime.now()} ===\n');
+
+  // Add a timeout to detect if Prisma doesn't send generate
+  final timer = Timer(const Duration(seconds: 30), () async {
+    await _log.writeAsString('TIMEOUT: No generate request received within 30s\n', mode: FileMode.append);
+    exit(1);
+  });
 
   final lines = stdin.transform(utf8.decoder).transform(const LineSplitter());
 
@@ -39,7 +45,6 @@ void main() async {
       final manifest = GeneratorManifest(
         prettyName: 'Dart ORM',
         defaultOutput: 'generated_dart_client',
-        version: 'v$version',
       );
 
       final response = jsonEncode({
@@ -49,14 +54,10 @@ void main() async {
       });
 
       await _log.writeAsString('SEND: $response\n', mode: FileMode.append);
-        stderr.writeln(response);
-        await stderr.flush();
-        stdout.writeln(response);
-        await stdout.flush();
-      stdout.writeln(response);
-      await stdout.flush();
-      await _log.writeAsString('Response sent to both stderr and stdout\n', mode: FileMode.append);
+      stderr.writeln(response);
+      await stderr.flush();
     } else if (method == 'generate') {
+      timer.cancel();
       await _log.writeAsString('Handling generate\n', mode: FileMode.append);
       try {
         final options = GeneratorOptions.fromJson(params);
@@ -71,8 +72,6 @@ void main() async {
         await _log.writeAsString('SEND: $response\n', mode: FileMode.append);
         stderr.writeln(response);
         await stderr.flush();
-        stdout.writeln(response);
-        await stdout.flush();
         await _log.writeAsString('Generate done, closing\n', mode: FileMode.append);
         break;
       } catch (e, st) {
@@ -90,6 +89,7 @@ void main() async {
     }
   }
 
+  timer.cancel();
   await _log.writeAsString('Generator exiting\n', mode: FileMode.append);
 }
 
