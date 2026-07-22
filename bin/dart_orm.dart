@@ -50,7 +50,8 @@ void main() async {
       });
 
       await _log.writeAsString('SEND: $response\n', mode: FileMode.append);
-      stderr.writeln(response);
+      stdout.writeln(response);
+      await stdout.flush();
     } else if (method == 'generate') {
       await _log.writeAsString('Handling generate\n', mode: FileMode.append);
       try {
@@ -64,7 +65,8 @@ void main() async {
         });
 
         await _log.writeAsString('SEND: $response\n', mode: FileMode.append);
-        stderr.writeln(response);
+        stdout.writeln(response);
+        await stdout.flush();
         await _log.writeAsString('Generate done, closing\n', mode: FileMode.append);
         break;
       } catch (e, st) {
@@ -74,7 +76,8 @@ void main() async {
           'error': {'code': -32000, 'message': e.toString()},
           'id': id,
         });
-        stderr.writeln(response);
+        stdout.writeln(response);
+        await stdout.flush();
       }
     } else {
       await _log.writeAsString('Unknown method: $method\n', mode: FileMode.append);
