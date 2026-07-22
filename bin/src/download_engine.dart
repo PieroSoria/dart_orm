@@ -30,7 +30,13 @@ Future<void> downloadEngine(GeneratorOptions options) async {
     print('⚠️[orm] Prisma provided the engine path, but the file does not exist');
   }
 
-  // 2) Else download from Prisma CDN
+  // 2) Skip download if engine already exists
+  final target = _engineFile(options.schemaPath);
+  if (await target.exists() && await target.length() > 1000000) {
+    return;
+  }
+
+  // 3) Download from Prisma CDN
   final version = options.version;
   if (version.isEmpty) {
     print("⚠️[orm] Engine version not provided in generate request.");
@@ -69,7 +75,6 @@ Future<void> downloadEngine(GeneratorOptions options) async {
     );
     final decompressed = gzip.decode(compressed);
 
-    final target = _engineFile(options.schemaPath);
     if (await target.exists()) await target.delete();
     await target.writeAsBytes(decompressed, flush: true);
 
