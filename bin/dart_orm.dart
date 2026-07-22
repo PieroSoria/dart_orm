@@ -7,7 +7,6 @@ import 'package:dart_orm/version.dart';
 import 'package:path/path.dart';
 
 import 'src/generator.dart';
-import 'src/utils/is_flutter_engine_type.dart';
 import 'src/download_engine.dart';
 
 final _log = File('dart_orm_generator.log');
@@ -44,15 +43,10 @@ void main() async {
 }
 
 Future<GeneratorManifest> _manifest(GeneratorConfig config) async {
-  final engines = switch (isFlutterEngineType(config.config)) {
-    true => null,
-    _ => const [EngineType.queryEngine]
-  };
   return GeneratorManifest(
     prettyName: 'Dart ORM',
     defaultOutput: 'generated_dart_client',
     version: 'v$version',
-    requiresEngines: engines,
   );
 }
 
