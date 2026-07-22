@@ -11,7 +11,7 @@ import 'src/utils/is_flutter_engine_type.dart';
 import 'src/download_engine.dart';
 
 void main() async {
-  final app = GeneratorApp.stdio(stdin: stdin, stdout: stderr);
+  final app = GeneratorApp.stdio(stdin: stdin, stdout: stdout);
   app.onManifest(manifest);
   app.onGenerate(generate);
 
@@ -37,11 +37,14 @@ Future<void> generate(GeneratorOptions options) async {
     throw StateError('No output directory specified');
   }
 
+  stderr.writeln('Generating Dart ORM client...');
+
   final generator = Generator(options);
   final libraries = generator.generate();
   final formatter = DartFormatter(languageVersion: DartFormatter.latestLanguageVersion);
 
   for (final (filename, library) in libraries) {
+    stderr.writeln('  Writing $filename...');
     final emitter = DartEmitter.scoped(useNullSafetySyntax: true, orderDirectives: true);
     final source = library.accept(emitter);
     final formated = formatter.format(source.toString());
@@ -50,7 +53,9 @@ Future<void> generate(GeneratorOptions options) async {
     await output.writeAsString(formated);
   }
 
+  stderr.writeln('Downloading query engine...');
   await downloadEngine(options);
+  stderr.writeln('Done!');
 }
 
 extension on File {
