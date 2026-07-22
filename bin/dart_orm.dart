@@ -17,7 +17,10 @@ void main() async {
 
   // Add a timeout to detect if Prisma doesn't send generate
   final timer = Timer(const Duration(seconds: 30), () async {
-    await _log.writeAsString('TIMEOUT: No generate request received within 30s\n', mode: FileMode.append);
+    await _log.writeAsString(
+      'TIMEOUT: No generate request received within 30s\n',
+      mode: FileMode.append,
+    );
     exit(1);
   });
 
@@ -32,7 +35,10 @@ void main() async {
     try {
       request = jsonDecode(line) as Map;
     } catch (e) {
-      await _log.writeAsString('Failed to parse JSON: $e\n', mode: FileMode.append);
+      await _log.writeAsString(
+        'Failed to parse JSON: $e\n',
+        mode: FileMode.append,
+      );
       continue;
     }
 
@@ -72,10 +78,16 @@ void main() async {
         await _log.writeAsString('SEND: $response\n', mode: FileMode.append);
         stderr.writeln('\n$response');
         await stderr.flush();
-        await _log.writeAsString('Generate done, closing\n', mode: FileMode.append);
+        await _log.writeAsString(
+          'Generate done, closing\n',
+          mode: FileMode.append,
+        );
         break;
       } catch (e, st) {
-        await _log.writeAsString('Generate ERROR: $e\n$st\n', mode: FileMode.append);
+        await _log.writeAsString(
+          'Generate ERROR: $e\n$st\n',
+          mode: FileMode.append,
+        );
         final response = jsonEncode({
           'jsonrpc': '2.0',
           'error': {'code': -32000, 'message': e.toString()},
@@ -85,7 +97,10 @@ void main() async {
         await stderr.flush();
       }
     } else {
-      await _log.writeAsString('Unknown method: $method\n', mode: FileMode.append);
+      await _log.writeAsString(
+        'Unknown method: $method\n',
+        mode: FileMode.append,
+      );
     }
   }
 
@@ -100,13 +115,20 @@ Future<void> _generate(GeneratorOptions options) async {
 
   final generator = Generator(options);
   final libraries = generator.generate();
-  final formatter = DartFormatter(languageVersion: DartFormatter.latestLanguageVersion);
+  final formatter = DartFormatter(
+    languageVersion: DartFormatter.latestLanguageVersion,
+  );
 
   for (final (filename, library) in libraries) {
-    final emitter = DartEmitter.scoped(useNullSafetySyntax: true, orderDirectives: true);
+    final emitter = DartEmitter.scoped(
+      useNullSafetySyntax: true,
+      orderDirectives: true,
+    );
     final source = library.accept(emitter);
     final formated = formatter.format(source.toString());
-    final output = await File(join(options.generator.output!.value, filename)).autoCreate();
+    final output = await File(
+      join(options.generator.output!.value, filename),
+    ).autoCreate();
     await output.writeAsString(formated);
   }
 
