@@ -32,8 +32,10 @@ Future<void> downloadEngine(GeneratorOptions options) async {
 
   // 2) Skip download if engine already exists
   final target = _engineFile(options.schemaPath);
-  if (await target.exists() && await target.length() > 1000000) {
-    return;
+  if (await target.exists()) {
+    final size = await target.length();
+    if (size > 1000000) return;
+    print('⚠️[orm] Engine file too small (${size} bytes), re-downloading');
   }
 
   // 3) Download from Prisma CDN
