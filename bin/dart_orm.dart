@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:code_builder/code_builder.dart';
@@ -11,43 +12,76 @@ import 'src/download_engine.dart';
 
 final _log = File('dart_orm_generator.log');
 
-Future<void> _logMsg(String msg) async {
-  await _log.writeAsString('$msg\n', mode: FileMode.append);
-}
-
 void main() async {
   await _log.writeAsString('=== Generator started at ${DateTime.now()} ===\n');
 
-  // Use stdout so Prisma can read JSON-RPC responses
-  final app = GeneratorApp.stdio(stdin: stdin, stdout: stdout);
+  final lines = stdin.transform(utf8.decoder).transform(const LineSplitter());
 
-  app.onManifest((config) async {
-    await _logMsg('getManifest handler called');
-    return _manifest(config);
-  });
+  await for (final line in lines) {
+    await _log.writeAsString('RECV: $line\n', mode: FileMode.append);
 
-  app.onGenerate((options) async {
-    await _logMsg('generate handler called');
+    if (line.trim().isEmpty) continue;
+
+    Map request;
     try {
-      await _generate(options);
-      await _logMsg('generate completed');
-    } catch (e, st) {
-      await _logMsg('generate ERROR: $e\n$st');
-      rethrow;
+      request = jsonDecode(line) as Map;
+    } catch (e) {
+      await _log.writeAsString('Failed to parse JSON: $e\n', mode: FileMode.append);
+      continue;
     }
-  });
 
-  await _logMsg('Calling app.listen()...');
-  await app.listen();
-  await _logMsg('app.listen() returned, exiting');
-}
+    final method = request['method'] as String?;
+    final params = request['params'] as Map? ?? {};
+    final id = request['id'];
 
-Future<GeneratorManifest> _manifest(GeneratorConfig config) async {
-  return GeneratorManifest(
-    prettyName: 'Dart ORM',
-    defaultOutput: 'generated_dart_client',
-    version: 'v$version',
-  );
+    if (method == 'getManifest') {
+      await _log.writeAsString('Handling getManifest\n', mode: FileMode.append);
+      final config = GeneratorConfig.fromJson(params.cast());
+      final manifest = GeneratorManifest(
+        prettyName: 'Dart ORM',
+        defaultOutput: 'generated_dart_client',
+        version: 'v$version',
+      );
+
+      final response = jsonEncode({
+        'jsonrpc': '2.0',
+        'result': {'manifest': manifest.toJson()},
+        'id': id,
+      });
+
+      await _log.writeAsString('SEND: $response\n', mode: FileMode.append);
+      stderr.writeln(response);
+    } else if (method == 'generate') {
+      await _log.writeAsString('Handling generate\n', mode: FileMode.append);
+      try {
+        final options = GeneratorOptions.fromJson(params);
+        await _generate(options);
+
+        final response = jsonEncode({
+          'jsonrpc': '2.0',
+          'result': null,
+          'id': id,
+        });
+
+        await _log.writeAsString('SEND: $response\n', mode: FileMode.append);
+        stderr.writeln(response);
+        await _log.writeAsString('Generate done, closing\n', mode: FileMode.append);
+        break;
+      } catch (e, st) {
+        await _log.writeAsString('Generate ERROR: $e\n$st\n', mode: FileMode.append);
+        final response = jsonEncode({
+          'jsonrpc': '2.0',
+          'error': {'code': -32000, 'message': e.toString()},
+          'id': id,
+        });
+        stderr.writeln(response);
+      }
+    } else {
+      await _log.writeAsString('Unknown method: $method\n', mode: FileMode.append);
+    }
+  }
+
+  await _log.writeAsString('Generator exiting\n', mode: FileMode.append);
 }
 
 Future<void> _generate(GeneratorOptions options) async {
