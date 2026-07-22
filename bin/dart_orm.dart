@@ -36,7 +36,6 @@ void main() async {
 
     if (method == 'getManifest') {
       await _log.writeAsString('Handling getManifest\n', mode: FileMode.append);
-      final config = GeneratorConfig.fromJson(params.cast());
       final manifest = GeneratorManifest(
         prettyName: 'Dart ORM',
         defaultOutput: 'generated_dart_client',
@@ -50,8 +49,13 @@ void main() async {
       });
 
       await _log.writeAsString('SEND: $response\n', mode: FileMode.append);
+        stderr.writeln(response);
+        await stderr.flush();
+        stdout.writeln(response);
+        await stdout.flush();
       stdout.writeln(response);
       await stdout.flush();
+      await _log.writeAsString('Response sent to both stderr and stdout\n', mode: FileMode.append);
     } else if (method == 'generate') {
       await _log.writeAsString('Handling generate\n', mode: FileMode.append);
       try {
@@ -65,6 +69,8 @@ void main() async {
         });
 
         await _log.writeAsString('SEND: $response\n', mode: FileMode.append);
+        stderr.writeln(response);
+        await stderr.flush();
         stdout.writeln(response);
         await stdout.flush();
         await _log.writeAsString('Generate done, closing\n', mode: FileMode.append);
@@ -76,8 +82,8 @@ void main() async {
           'error': {'code': -32000, 'message': e.toString()},
           'id': id,
         });
-        stdout.writeln(response);
-        await stdout.flush();
+        stderr.writeln(response);
+        await stderr.flush();
       }
     } else {
       await _log.writeAsString('Unknown method: $method\n', mode: FileMode.append);
