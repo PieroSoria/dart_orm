@@ -54,7 +54,7 @@ void main() async {
       });
 
       await _log.writeAsString('SEND: $response\n', mode: FileMode.append);
-      stderr.writeln(response);
+      stderr.writeln('\n$response');
       await stderr.flush();
     } else if (method == 'generate') {
       timer.cancel();
@@ -70,7 +70,7 @@ void main() async {
         });
 
         await _log.writeAsString('SEND: $response\n', mode: FileMode.append);
-        stderr.writeln(response);
+        stderr.writeln('\n$response');
         await stderr.flush();
         await _log.writeAsString('Generate done, closing\n', mode: FileMode.append);
         break;
@@ -81,7 +81,7 @@ void main() async {
           'error': {'code': -32000, 'message': e.toString()},
           'id': id,
         });
-        stderr.writeln(response);
+        stderr.writeln('\n$response');
         await stderr.flush();
       }
     } else {
