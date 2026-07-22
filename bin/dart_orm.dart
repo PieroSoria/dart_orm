@@ -1,10 +1,10 @@
 import '../lib/src/codegen.dart';
 import '../lib/src/protocol.dart';
 
-void main() {
+void main() async {
   final handler = _DartOrmGeneratorHandler();
   final protocol = GeneratorProtocol(handler);
-  protocol.run();
+  await protocol.run();
 }
 
 class _DartOrmGeneratorHandler extends GeneratorHandler {

@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -13,35 +12,18 @@ class GeneratorProtocol {
   GeneratorProtocol(this._handler);
 
   Future<void> run() async {
-    final completer = Completer<void>();
+    while (true) {
+      final line = stdin.readLineSync(encoding: utf8);
+      if (line == null) break;
+      if (line.trim().isEmpty) continue;
 
-    stdin
-        .transform(utf8.decoder)
-        .transform(const LineSplitter())
-        .listen(
-      (line) async {
-        if (line.trim().isEmpty) return;
-        try {
-          final request = jsonDecode(line) as Map<String, dynamic>;
-          await _handleRequest(request);
-        } catch (e) {
-          stderr.writeln(jsonEncode({
-            'jsonrpc': '2.0',
-            'error': {'code': -32700, 'message': e.toString()},
-            'id': null,
-          }));
-        }
-      },
-      onDone: () {
-        if (!completer.isCompleted) completer.complete();
-      },
-      onError: (e) {
-        if (!completer.isCompleted) completer.completeError(e);
-      },
-    );
-
-    // stdin.resume();
-    return completer.future;
+      try {
+        final request = jsonDecode(line) as Map<String, dynamic>;
+        await _handleRequest(request);
+      } catch (e) {
+        _respondError(null, -32700, e.toString());
+      }
+    }
   }
 
   Future<void> _handleRequest(Map<String, dynamic> request) async {
@@ -61,27 +43,30 @@ class GeneratorProtocol {
           _respond(id, null);
       }
     } catch (e) {
-      _respondError(id, -32000, e.toString(), e is Error ? e.stackTrace.toString() : null);
+      _respondError(
+        id,
+        -32000,
+        e.toString(),
+        e is Error ? e.stackTrace.toString() : null,
+      );
     }
   }
 
   void _respond(dynamic id, dynamic result) {
-    stderr.writeln(jsonEncode({
-      'jsonrpc': '2.0',
-      'result': result,
-      'id': id,
-    }));
+    stderr.writeln(jsonEncode({'jsonrpc': '2.0', 'result': result, 'id': id}));
   }
 
   void _respondError(dynamic id, int code, String message, [String? stack]) {
-    stderr.writeln(jsonEncode({
-      'jsonrpc': '2.0',
-      'error': {
-        'code': code,
-        'message': message,
-        'data': stack != null ? {'stack': stack} : null,
-      },
-      'id': id,
-    }));
+    stderr.writeln(
+      jsonEncode({
+        'jsonrpc': '2.0',
+        'error': {
+          'code': code,
+          'message': message,
+          if (stack != null) 'data': {'stack': stack},
+        },
+        'id': id,
+      }),
+    );
   }
 }
