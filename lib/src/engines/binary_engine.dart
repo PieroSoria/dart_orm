@@ -23,7 +23,11 @@ import '../runtime/transaction/transaction.dart';
 import '../runtime/transaction/transaction_headers.dart';
 
 class BinaryEngine extends Engine {
-  BinaryEngine({required super.schema, required super.datasources, required super.options});
+  BinaryEngine({
+    required super.schema,
+    required super.datasources,
+    required super.options,
+  });
 
   late Uri _endpoint;
   Future<void> Function()? _stopCallback;
@@ -60,7 +64,11 @@ class BinaryEngine extends Engine {
   }
 
   @override
-  Future<Map> request(JsonQuery query, {TransactionHeaders? headers, Transaction? transaction}) async {
+  Future<Map> request(
+    JsonQuery query, {
+    TransactionHeaders? headers,
+    Transaction? transaction,
+  }) async {
     headers ??= TransactionHeaders();
     await start();
 
@@ -68,7 +76,11 @@ class BinaryEngine extends Engine {
       headers.set('x-transaction-id', transaction.id);
     }
 
-    final response = await _client.post(_endpoint, headers: headers.headers, body: query.toJson());
+    final response = await _client.post(
+      _endpoint,
+      headers: headers.headers,
+      body: jsonEncode(query.toJson()),
+    );
     final result = await response.json();
 
     return switch (result) {
@@ -79,10 +91,16 @@ class BinaryEngine extends Engine {
   }
 
   @override
-  Future<void> commitTransaction({required TransactionHeaders headers, required Transaction transaction}) async {
+  Future<void> commitTransaction({
+    required TransactionHeaders headers,
+    required Transaction transaction,
+  }) async {
     await start();
 
-    final response = await _client.post(_endpoint.resolve('/transaction/${transaction.id}/commit'), headers: headers.headers);
+    final response = await _client.post(
+      _endpoint.resolve('/transaction/${transaction.id}/commit'),
+      headers: headers.headers,
+    );
     final result = await response.json();
 
     return switch (result) {
@@ -92,10 +110,16 @@ class BinaryEngine extends Engine {
   }
 
   @override
-  Future<void> rollbackTransaction({required TransactionHeaders headers, required Transaction transaction}) async {
+  Future<void> rollbackTransaction({
+    required TransactionHeaders headers,
+    required Transaction transaction,
+  }) async {
     await start();
 
-    final response = await _client.post(_endpoint.resolve('/transaction/${transaction.id}/rollback'), headers: headers.headers);
+    final response = await _client.post(
+      _endpoint.resolve('/transaction/${transaction.id}/rollback'),
+      headers: headers.headers,
+    );
     final result = await response.json();
 
     return switch (result) {
@@ -105,28 +129,48 @@ class BinaryEngine extends Engine {
   }
 
   @override
-  Future<Transaction> startTransaction({required TransactionHeaders headers, int maxWait = 2000, int timeout = 5000, TransactionIsolationLevel? isolationLevel}) async {
+  Future<Transaction> startTransaction({
+    required TransactionHeaders headers,
+    int maxWait = 2000,
+    int timeout = 5000,
+    TransactionIsolationLevel? isolationLevel,
+  }) async {
     await start();
 
-    final response = await _client.post(_endpoint.resolve('/transaction/start'), headers: headers.headers, body: {
-      'max_wait': maxWait,
-      'timeout': timeout,
-      if (isolationLevel != null) 'isolation_level': isolationLevel.name,
-    });
+    final response = await _client.post(
+      _endpoint.resolve('/transaction/start'),
+      headers: headers.headers,
+      body: jsonEncode({
+        'max_wait': maxWait,
+        'timeout': timeout,
+        if (isolationLevel != null) 'isolation_level': isolationLevel.name,
+      }),
+    );
     final result = await response.json();
 
     return switch (result) {
       {'id': final String id} => Transaction(id),
       {'errors': final Iterable errors} => throwErrors(errors),
-      _ => throw PrismaClientUnknownRequestError(message: json.encode(PrismaClientUnknownRequestError)),
+      _ => throw PrismaClientUnknownRequestError(
+        message: json.encode(PrismaClientUnknownRequestError),
+      ),
     };
   }
 
   @override
-  Future metrics({Map<String, String>? globalLabels, required MetricsFormat format}) async {
+  Future metrics({
+    Map<String, String>? globalLabels,
+    required MetricsFormat format,
+  }) async {
     await start();
 
-    final response = await _client.post(_endpoint.replace(path: '/metrics', queryParameters: {'format': format.name}), body: globalLabels);
+    final response = await _client.post(
+      _endpoint.replace(
+        path: '/metrics',
+        queryParameters: {'format': format.name},
+      ),
+      body: jsonEncode(globalLabels),
+    );
 
     return switch (format) {
       MetricsFormat.json => response.json(),
@@ -140,7 +184,9 @@ extension on BinaryEngine {
     const executable = 'prisma-query-engine';
     final projectDirectory = findProjectDirectory();
 
-    Iterable<String> generateEnginePaths(Iterable<io.Directory> searchDirectories) sync* {
+    Iterable<String> generateEnginePaths(
+      Iterable<io.Directory> searchDirectories,
+    ) sync* {
       for (final dir in searchDirectories) {
         yield path.join(dir.path, executable);
         yield path.join(dir.path, 'prisma', executable);
@@ -148,7 +194,10 @@ extension on BinaryEngine {
       }
     }
 
-    final enginePaths = generateEnginePaths([io.Directory.current, if (projectDirectory != null) projectDirectory]).toSet();
+    final enginePaths = generateEnginePaths([
+      io.Directory.current,
+      if (projectDirectory != null) projectDirectory,
+    ]).toSet();
 
     for (final enginePath in enginePaths) {
       final file = io.File(enginePath);
@@ -156,25 +205,40 @@ extension on BinaryEngine {
     }
 
     throw PrismaClientInitializationError(
-        errorCode: "QE404",
-        message:
-            'No binary engine found, please make sure any of the following locations contain the executable file: ${enginePaths.map((e) => path.relative(e)).toSet()}');
+      errorCode: "QE404",
+      message:
+          'No binary engine found, please make sure any of the following locations contain the executable file: ${enginePaths.map((e) => path.relative(e)).toSet()}',
+    );
   }
 
   String createOverwriteDatasourcesString() {
-    Map<String, String> overwriteDatasources = this.datasources.map((name, datasource) {
+    Map<String, String> overwriteDatasources = this.datasources.map((
+      name,
+      datasource,
+    ) {
       if (options.datasourceUrl != null) {
-        return MapEntry(name, Prisma.validateDatasourceURL(options.datasourceUrl!));
+        return MapEntry(
+          name,
+          Prisma.validateDatasourceURL(options.datasourceUrl!),
+        );
       }
 
       if (options.datasources?.containsKey(name) == true) {
-        return MapEntry(name, Prisma.validateDatasourceURL(options.datasources![name]!));
+        return MapEntry(
+          name,
+          Prisma.validateDatasourceURL(options.datasources![name]!),
+        );
       }
 
       final url = switch (datasource) {
         Datasource(type: DatasourceType.url, value: final url) => url,
         Datasource(type: DatasourceType.environment, value: final name) =>
-          Prisma.env(name).or(() => throw PrismaClientInitializationError(errorCode: "P1013", message: 'The environment variable "$name" does not exist')),
+          Prisma.env(name).or(
+            () => throw PrismaClientInitializationError(
+              errorCode: "P1013",
+              message: 'The environment variable "$name" does not exist',
+            ),
+          ),
       };
 
       return MapEntry(name, Prisma.validateDatasourceURL(url));
@@ -182,13 +246,19 @@ extension on BinaryEngine {
 
     Map<String, String> generateDatasourceItem(MapEntry<String, String> e) {
       if (e.value.startsWith('prisma://')) {
-        throw PrismaClientInitializationError(errorCode: 'P1013', message: 'The binary engine does not support Prisma Proxy connection URL');
+        throw PrismaClientInitializationError(
+          errorCode: 'P1013',
+          message:
+              'The binary engine does not support Prisma Proxy connection URL',
+        );
       }
 
       return {'name': e.key, 'url': e.value};
     }
 
-    final datasources = overwriteDatasources.entries.map(generateDatasourceItem).toList();
+    final datasources = overwriteDatasources.entries
+        .map(generateDatasourceItem)
+        .toList();
 
     return base64.encode(utf8.encode(json.encode(datasources)));
   }
@@ -207,12 +277,15 @@ extension on BinaryEngine {
       environment['LOG_QUERIES'] = 'true';
     }
 
-    if (!Prisma.envAsBoolean('NO_COLOR') && options.errorFormat == ErrorFormat.pretty) {
+    if (!Prisma.envAsBoolean('NO_COLOR') &&
+        options.errorFormat == ErrorFormat.pretty) {
       environment['CLICOLOR_FORCE'] = "1";
     }
 
     environment['RUST_BACKTRACE'] = Prisma.env('RUST_BACKTRACE').or(() => '1');
-    environment['RUST_LOG'] = Prisma.env('RUST_LOG').or(() => LogLevel.info.name);
+    environment['RUST_LOG'] = Prisma.env(
+      'RUST_LOG',
+    ).or(() => LogLevel.info.name);
     environment['OVERWRITE_DATASOURCES'] = createOverwriteDatasourcesString();
     environment['PRISMA_DML'] = base64.encode(utf8.encode(schema));
 
@@ -220,16 +293,31 @@ extension on BinaryEngine {
   }
 
   Future<(Uri, Future<void> Function())> createServer() async {
-    String executable = path.join('.', path.relative(findQueryEngine().path, from: io.Directory.current.path));
+    String executable = path.join(
+      '.',
+      path.relative(findQueryEngine().path, from: io.Directory.current.path),
+    );
     final arguments = createQueryEngineArgs().toList();
     final environment = createQueryEngineEnvironment();
-    final process = await Process.start(executable, arguments, workingDirectory: io.Directory.current.path, includeParentEnvironment: false, environment: environment);
+    final process = await Process.start(
+      executable,
+      arguments,
+      workingDirectory: io.Directory.current.path,
+      includeParentEnvironment: false,
+      environment: environment,
+    );
 
     final stderrSubscription = process.stderr.byline().listen((event) {
       final payload = tryParseJSON(event);
-      if (payload case {'error_code': final String errorCode, 'message': final String message}) {
+      if (payload case {
+        'error_code': final String errorCode,
+        'message': final String message,
+      }) {
         process.kill();
-        throw PrismaClientInitializationError(message: message, errorCode: errorCode);
+        throw PrismaClientInitializationError(
+          message: message,
+          errorCode: errorCode,
+        );
       }
     });
 
@@ -244,7 +332,9 @@ extension on BinaryEngine {
       }
 
       final (level, engineEvent) = createEngineEvent(payload);
-      if (level == LogLevel.error && engineEvent is LogEvent && engineEvent.message.contains('fatal error')) {
+      if (level == LogLevel.error &&
+          engineEvent is LogEvent &&
+          engineEvent.message.contains('fatal error')) {
         process.kill();
         throw PrismaClientRustPanicError(message: engineEvent.message);
       }
@@ -258,20 +348,37 @@ extension on BinaryEngine {
       await stdoutSubscription.cancel();
     }
 
-    for (int count = 0;; count++) {
-      options.logEmitter.emit(LogLevel.info, LogEvent(timestamp: DateTime.now(), target: 'prisma:client', message: 'Whether the engine has started for the ${count + 1} th time.'));
+    for (int count = 0; ; count++) {
+      options.logEmitter.emit(
+        LogLevel.info,
+        LogEvent(
+          timestamp: DateTime.now(),
+          target: 'prisma:client',
+          message:
+              'Whether the engine has started for the ${count + 1} th time.',
+        ),
+      );
 
       if (endpoint != null) break;
       if (count >= 10) {
         await stop();
-        throw PrismaClientInitializationError(message: 'Engine startup failed.');
+        throw PrismaClientInitializationError(
+          message: 'Engine startup failed.',
+        );
       }
 
       await Future.delayed(Duration(milliseconds: 300 * count));
     }
 
-    for (int count = 0;; count++) {
-      options.logEmitter.emit(LogLevel.info, LogEvent(timestamp: DateTime.now(), target: 'prisma:client', message: 'Whether the engine has ready for the ${count + 1} th time.'));
+    for (int count = 0; ; count++) {
+      options.logEmitter.emit(
+        LogLevel.info,
+        LogEvent(
+          timestamp: DateTime.now(),
+          target: 'prisma:client',
+          message: 'Whether the engine has ready for the ${count + 1} th time.',
+        ),
+      );
 
       try {
         final response = await _client.get(endpoint!.replace(path: '/status'));
@@ -283,7 +390,9 @@ extension on BinaryEngine {
 
       if (count >= 10) {
         await stop();
-        throw PrismaClientInitializationError(message: 'Engine startup failed.');
+        throw PrismaClientInitializationError(
+          message: 'Engine startup failed.',
+        );
       }
 
       await Future.delayed(Duration(milliseconds: 300 * count));
@@ -294,35 +403,66 @@ extension on BinaryEngine {
 
   (LogLevel, EngineEvent) createEngineEvent(payload) {
     if (payload case {
-          'timestamp': final String timestamp,
-          'target': final String target,
-          'fields': {'query': final String query, 'params': final String params, 'duration': final num duration},
-        }) {
-      final event = QueryEvent(timestamp: DateTime.parse(timestamp), target: target, query: query, params: params, duration: Duration(milliseconds: duration.toInt()));
+      'timestamp': final String timestamp,
+      'target': final String target,
+      'fields': {
+        'query': final String query,
+        'params': final String params,
+        'duration': final num duration,
+      },
+    }) {
+      final event = QueryEvent(
+        timestamp: DateTime.parse(timestamp),
+        target: target,
+        query: query,
+        params: params,
+        duration: Duration(milliseconds: duration.toInt()),
+      );
 
       return (LogLevel.query, event);
     } else if (payload case {
-          'timestamp': final String timestamp,
-          'target': final String target,
-          'level': final String rawLogLevel,
-          'fields': {'message': final String message}
-        }) {
-      final level = LogLevel.values.firstWhere((e) => e.name.toLowerCase() == rawLogLevel.toLowerCase(), orElse: () => LogLevel.warn);
-      final event = LogEvent(timestamp: DateTime.parse(timestamp), target: target, message: message);
+      'timestamp': final String timestamp,
+      'target': final String target,
+      'level': final String rawLogLevel,
+      'fields': {'message': final String message},
+    }) {
+      final level = LogLevel.values.firstWhere(
+        (e) => e.name.toLowerCase() == rawLogLevel.toLowerCase(),
+        orElse: () => LogLevel.warn,
+      );
+      final event = LogEvent(
+        timestamp: DateTime.parse(timestamp),
+        target: target,
+        message: message,
+      );
 
       return (level, event);
     }
 
-    return (LogLevel.warn, LogEvent(target: 'prisma:client:engines:binary', timestamp: DateTime.now(), message: 'Parse event fail, raw event: ${json.encode(payload)}'));
+    return (
+      LogLevel.warn,
+      LogEvent(
+        target: 'prisma:client:engines:binary',
+        timestamp: DateTime.now(),
+        message: 'Parse event fail, raw event: ${json.encode(payload)}',
+      ),
+    );
   }
 
   void tryCompleteEndpoint(payload, void Function(Uri) setter) {
-    if (payload case {
+    if (payload
+        case {
           'level': 'INFO',
           'target': 'query_engine::server',
-          'fields': {'message': final String message, 'ip': final String ip, 'port': final String port}
+          'fields': {
+            'message': final String message,
+            'ip': final String ip,
+            'port': final String port,
+          },
         }
-        when message.startsWith('Started query engine http server') && ip.isNotEmpty && port.isNotEmpty) {
+        when message.startsWith('Started query engine http server') &&
+            ip.isNotEmpty &&
+            port.isNotEmpty) {
       final endpoint = Uri.http('$ip:$port');
 
       setter(endpoint);
@@ -341,8 +481,12 @@ extension on BinaryEngine {
     if (errors.length == 1) {
       throw switch (errors.single) {
         Map payload => throwPrismaKnowError(payload),
-        Object message => throw PrismaClientUnknownRequestError(message: json.encode(message)),
-        _ => throw PrismaClientUnknownRequestError(message: json.encode(errors)),
+        Object message => throw PrismaClientUnknownRequestError(
+          message: json.encode(message),
+        ),
+        _ => throw PrismaClientUnknownRequestError(
+          message: json.encode(errors),
+        ),
       };
     }
 
@@ -352,11 +496,18 @@ extension on BinaryEngine {
   Never throwPrismaKnowError(Map payload) {
     final userFacingError = payload['user_facing_error'];
 
-    if (userFacingError case {'error_code': final String errorCode, 'message': final String message}) {
-      throw PrismaClientKnownRequestError(code: errorCode, message: message, meta: switch (userFacingError['meta']) {
-        Map meta => meta.map((k, v) => MapEntry(k.toString(), v)),
-        _ => null,
-      });
+    if (userFacingError case {
+      'error_code': final String errorCode,
+      'message': final String message,
+    }) {
+      throw PrismaClientKnownRequestError(
+        code: errorCode,
+        message: message,
+        meta: switch (userFacingError['meta']) {
+          Map meta => meta.map((k, v) => MapEntry(k.toString(), v)),
+          _ => null,
+        },
+      );
     }
 
     throw PrismaClientUnknownRequestError(message: payload['error']!);
@@ -371,5 +522,6 @@ extension<T> on T? {
 }
 
 extension on Stream<List<int>> {
-  Stream<String> byline() => transform(utf8.decoder).transform(const LineSplitter());
+  Stream<String> byline() =>
+      transform(utf8.decoder).transform(const LineSplitter());
 }
