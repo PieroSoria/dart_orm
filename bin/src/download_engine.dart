@@ -27,7 +27,9 @@ Future<void> downloadEngine(GeneratorOptions options) async {
       print('✅[orm] Query engine copied to ${target.path}');
       return;
     }
-    print('⚠️[orm] Prisma provided the engine path, but the file does not exist');
+    print(
+      '⚠️[orm] Prisma provided the engine path, but the file does not exist',
+    );
   }
 
   // 2) Skip download if engine already exists
@@ -56,7 +58,8 @@ Future<void> downloadEngine(GeneratorOptions options) async {
   final isWindows = nativeTarget == 'windows';
   final engineName = 'query-engine';
   final ext = isWindows ? '.exe.gz' : '.gz';
-  final url = 'https://binaries.prisma.sh/all_commits/$version/$nativeTarget/$engineName$ext';
+  final url =
+      'https://binaries.prisma.sh/all_commits/$version/$nativeTarget/$engineName$ext';
 
   print('ℹ️[orm] Downloading query engine ($nativeTarget)...');
 
@@ -80,9 +83,21 @@ Future<void> downloadEngine(GeneratorOptions options) async {
     if (await target.exists()) await target.delete();
     await target.writeAsBytes(decompressed, flush: true);
 
+    await _ensureExecutablePermission(target);
+
     print('✅[orm] Query engine downloaded to ${target.path}');
   } catch (e) {
     print('⚠️[orm] Engine download error: $e');
+  }
+}
+
+Future<void> _ensureExecutablePermission(File target) async {
+  if (!Platform.isWindows) {
+    try {
+      await Process.run('chmod', ['+x', target.path]);
+    } catch (e) {
+      print('⚠️[orm] No se pudieron aplicar permisos chmod +x: $e');
+    }
   }
 }
 
