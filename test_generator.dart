@@ -1,8 +1,6 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:dart_orm/generator_helper.dart';
-import 'package:dart_orm/dmmf.dart';
 
 import 'bin/src/generator.dart';
 
