@@ -78,7 +78,7 @@ extension on Generator {
 
   Method createEngineGetter() {
     final engine = switch (options.generator.config['engineType']) {
-      'flutter' => refer('LibraryEngine', 'package:dart_orm_flutter/dart_orm_flutter.dart'),
+      'flutter' => refer('LibraryEngine', 'package:orm_flutter/orm_flutter.dart'),
       _ => refer('BinaryEngine', 'package:dart_orm/engines/binary.dart'),
     };
 
